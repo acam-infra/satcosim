@@ -1,2 +1,13 @@
+# Each submodule ignores its own build output (venv, node_modules, runs/, cosim_out/ ...).
+# Here: only what the umbrella itself produces.
 .venv/
 __pycache__/
+*.pyc
+# python cosim.py check regenerates traces here to compare with satsim/input/traces
+.cosim_check/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

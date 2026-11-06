@@ -31,6 +31,7 @@ python cosim.py view       # 打开 http://localhost:5288/play.html
 | 改了星座 / 链路，重新导出轨迹 | `python cosim.py trace`（可加 `coop-w53` 只导一个） |
 | 轨迹 + 全部实验从头跑 | `python cosim.py all` |
 | 跑三套测试 | `python cosim.py test` |
+| 检查轨迹、回放、子模块是否一致（提交前跑） | `python cosim.py check` |
 | 看两边当前提交和未提交改动 | `python cosim.py status` |
 | 把子模块更新到各自分支最新 | `python cosim.py update` |
 
@@ -49,6 +50,22 @@ cd .. && git add satsim && git commit -m "bump satsim" && git push
 
 改了策略并重跑后，通常两个子模块都有改动：satsim（代码/配置）和 orbitsim（`viz/public/playback/` 里的新回放）。
 两边各自 push 后，在这里 `git add orbitsim satsim` 一次提交。
+
+## 哪些文件入库
+
+| 文件 | 位置 | 入库 | 说明 |
+|---|---|---|---|
+| 接触轨迹 | `satsim/input/traces/*.json` | 是 | 实验输入，保证可复现；`cosim.py trace` 从 orbitsim 重新生成 |
+| 轨迹导出缓存 | `orbitsim/cosim_out/` | 否 | `export_cosim.py` 默认输出 |
+| 回放数据 | `orbitsim/viz/public/playback/*.json` | 是 | 克隆即可看；带 `provenance`，不显示 diff（`linguist-generated`）|
+| 实验汇总 / 扫描 CSV | `satsim/runs/` | 否 | 本地结果，结论写进 `docs/notes/` |
+| 截图 | `orbitsim/viz/shots/` | 否 | `shot_play.mjs` 默认输出；README 引用的才拷到 `viz/docs/` |
+| 依赖锁 | `uv.lock`、`viz/package-lock.json` | 是 | 可复现安装 |
+| venv / node_modules / 缓存 | 各子模块 | 否 | 各自 `.gitignore` |
+
+三个仓库都用 `.gitattributes` 固定 LF 换行（不受 `core.autocrlf` 影响）。回放文件较大（现在合计约 12 MB），只提交要展示的实验；超过约 50 MB 时改用 Git LFS 或 GitHub Release 附件。
+
+`cosim.py check` 做三件事：用 orbitsim 当前代码重新导出轨迹，和 `satsim/input/traces` 逐字节比较；用回放里的 `provenance` 哈希判断回放是不是由当前轨迹和配置生成的；确认两个子模块当前提交已 push、工作区干净。任一项不过就以退出码 1 结束，并提示该跑哪条命令。
 
 ## 文档
 
