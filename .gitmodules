@@ -1,0 +1,8 @@
+[submodule "orbitsim"]
+	path = orbitsim
+	url = https://github.com/chocolatedesue/orbitsim.git
+	branch = master
+[submodule "satsim"]
+	path = satsim
+	url = https://github.com/chocolatedesue/satsim.git
+	branch = main
