@@ -4,5 +4,5 @@
 	branch = master
 [submodule "satsim"]
 	path = satsim
-	url = https://github.com/chocolatedesue/satsim.git
+	url = https://github.com/fumayulaa/satsim.git
 	branch = main

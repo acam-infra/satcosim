@@ -27,6 +27,7 @@ python cosim.py view       # 打开 http://localhost:5288/play.html
 
 | 想做的事 | 命令 |
 |---|---|
+| **前置问题确认（Motivation）**：即时合成多轨道面异构 SSO，对比 `nearest` / `rr` / `random` 等计算负载与达标率 | `PYTHONPATH=satsim/src:orbitsim/src python satsim/scripts/exp_motivation_multi_sso.py` |
 | 改了调度策略 / 负载，重跑一个实验 | `python cosim.py run typhoon_agentic_v1` |
 | 改了星座 / 链路，重新导出轨迹 | `python cosim.py trace`（可加 `coop-w53` 只导一个） |
 | 轨迹 + 全部实验从头跑 | `python cosim.py all` |
