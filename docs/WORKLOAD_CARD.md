@@ -44,10 +44,10 @@
    - **依据属性**：【假设 / 取整工程近似】。
    - **推导与说明**：在低轨（LEO）高度 $h = 550\text{ km}$ 处，按开普勒第三定律算得的轨道公转周期约为 $T = 2\pi \sqrt{\frac{(R_E + h)^3}{\mu}} \approx 5738\text{ s} \approx 95.6\text{ 分钟}$（参见 Vallado, *Fundamentals of Astrodynamics and Applications*, 5th Ed., Section 2.2）。三份配置中取整为 $5400\text{ s}$（90 分钟），约等于一个完整的轨道周期（包含一次完整的日照期与日影期升降温过程），属于取整的工程近似假设。
 2. **`release_burst`（过境突发压缩 `duration_s: 150`，`period_s: 900`，`source_phase_s: 90`）**：
-   - **依据属性**：`duration_s: 150` 为【有出处】；`period_s: 900` 与 `source_phase_s: 90` 为【假设】。
+   - **依据属性**：`duration_s: 150` 为【推导，基于假设的 1000 km AOI】；`period_s: 900` 与 `source_phase_s: 90` 为【假设】。
    - **代码机制与出处**：
      - 在代码中（`world.py::_compress_releases`），`release_burst` 的作用是将每 `period_s = 900` 秒内的所有到达请求，在时间轴上线性压缩进长度为 `duration_s = 150` 秒的过境窗口内。因此，**在突发窗口内，遥感星的瞬时到达率提升至名义平均到达率的 6 倍（$900 / 150 = 6\times$）**，极易诱发瞬时队列积压与热积累。
-     - **`duration_s: 150` 出处**：LEO 遥感星在 500–600 km 高度飞行时星下点对地速度约为 $7.0\text{–}7.6\text{ km/s}$。对地面沿轨约 1000 km 跨度的重点目标区域（AOI，如台风风圈、热点灾区），推扫过境视场持续时间约为 $1000\text{ km} / 7.2\text{ km/s} \approx 139\text{ 秒} \approx 2.3\text{ 分钟}$（参见 ESA Sentinel-2 观测几何标准；PlanetScope 传感器过顶时间）。取 150 秒（2.5 分钟）与该过境推扫视场吻合。
+     - **`duration_s: 150` 出处**：LEO 遥感星在 500–600 km 高度飞行时星下点对地速度约为 $7.0\text{–}7.6\text{ km/s}$。对地面沿轨约 1000 km 跨度的重点目标区域（AOI，如台风风圈、热点灾区），推扫过境视场持续时间约为 $1000\text{ km} / 7.2\text{ km/s} \approx 139\text{ 秒} \approx 2.3\text{ 分钟}$。其中星下点速度是 LEO 常识量级，1000 km 沿轨 AOI 跨度是【假设】；取 150 秒（2.5 分钟）是对该推导的取整。
      - **`period_s: 900` 与 `source_phase_s: 90`**：周期片 15 分钟与 3 颗遥感星交错相位 90 秒无公开文献出处，属于场景构造的工程【假设】。
 3. **`rate_per_rs_per_min = 12`（单星到达率 12 req/min）**：
    - **依据属性**：【假设】。
@@ -138,7 +138,7 @@
 #### （2）长请求输入长度：遥感高分辨率 VLM 视觉切片分词
 - **依据属性**：GeoChat 架构参数为【有出处】；综合取值 `long_pin = 4000` 为【假设】。
 - **出处与机制推导**：
-  - **GeoChat** (Khattak et al., CVPR 2024, arXiv:2311.15826, [https://arxiv.org/abs/2311.15826](https://arxiv.org/abs/2311.15826), Section 3.1 Architecture)：明确指出 "GeoChat takes high-resolution images of 504 × 504 by interpolating the position embeddings of CLIP ViT-L/14, yielding 1,296 visual tokens"。
+  - **GeoChat** (Khattak et al., CVPR 2024, arXiv:2311.15826, [https://arxiv.org/abs/2311.15826](https://arxiv.org/abs/2311.15826), Section 3.1 Architecture)：采用插值 CLIP ViT-L/14 位置编码的方式把输入分辨率提到 504 × 504【有出处】；按 14 像素 patch 推算为 (504/14)² = 36² = 1,296 个视觉 token【推导，原文未直接给出该数字】。
   - **动态分辨率模型（如 Qwen2-VL）机制**：Qwen2-VL 原生采用 NaViT 动态分辨率分词，其机制为每 $28 \times 28$ 像素 patch 对应 1 个视觉 Token。对于约 $1000 \times 1000$ 像素的遥感切片，约产生 $(1000/28) \times (1000/28) \approx 1275$ 个视觉 Token；若在遥感变化检测或应急研判中需要拼接前时相历史参考图与当前图（双图块），视觉 Token 约达 2,500；加上系统提示词、地理边界框（Bounding Box）坐标与任务说明（约 500–1000 Token），长输入 Token 整体取 `long_pin = 4000` 属于合理的工程【假设】。
 
 #### （3）长请求输出长度与精确解码耗时推演
@@ -159,7 +159,7 @@
 
 - **关键物理结论**：
   1. 仿真中长任务独占解码耗时处于 **258–549 秒（约 4–9 分钟）** 区间。
-  2. 配置文件中的热时间常数 `tau_s: 240` 是**假设敏感度点（Assumed sensitivity point）**，非在轨实测标定。但单任务连续全速解码 $258\text{–}549\text{ s}$ 已经跨越了一个以上热时间常数，在单节点承接多任务并发时将迅速触发结温上升并逼近 84°C 阈值。
+  2. 配置文件中的热时间常数 `tau_s: 240` 是**假设敏感度点（Assumed sensitivity point）**，非在轨实测标定。但单任务连续全速解码 $258\text{–}549\text{ s}$ 已经跨越了一个以上热时间常数，在单节点承接多任务并发时可能使结温逼近 84°C 阈值【推测，待 E1 验证】。
 
 #### （4）图块上传体积
 - **依据属性**：`long_upload_MB = 500` 为【有出处】；`short_upload_MB = 50` 为【假设】。
@@ -289,7 +289,7 @@ workload:
   rate_per_rs_per_min: 12            # 全网平均到达率 (每颗 RS 星 12 req/min，全网 36 req/min = 0.6 req/s)
   release_burst:                     # 过境推扫突发模式 (在 150s 窗口内集中释放 900s 流量，瞬时到达率 6×)
     period_s: 900                    # 周期片 15 分钟 (假设)
-    duration_s: 150                  # 单次过境成像窗口 2.5 分钟 (对齐 LEO 1000km AOI 视场过境几何)
+    duration_s: 150                  # 单次过境成像窗口 2.5 分钟 (按假设的 1000km AOI 过境几何推导)
     source_phase_s: 90               # 3 颗遥感星相位交错 90 秒 (假设)
 
   # 2. 从哪来（局部性与热点）
