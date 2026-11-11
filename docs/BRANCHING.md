@@ -9,6 +9,31 @@
 - 其余分支都是**短命分支**：一个任务一个分支，合并后立刻删除。
 - 不建 `dev`、`develop`、`release`、个人名分支（如 `zhangsan`）。
 
+## 1.5 阶段集成分支（一个阶段多个任务并发时用）
+
+一个阶段拆成几个并发任务时，加一层**集成分支**，任务分支从它切出、先合回它，整个阶段验收后再合进 `main`：
+
+```
+main
+ └─ int/step1-measure-rules        ← 阶段集成分支（sub branch），阶段验收后 PR 合进 main
+     ├─ feat/t1-node-state-helpers  ← 任务分支（sub-sub branch），各自一个 git worktree
+     ├─ feat/t2-badput-p95-metrics
+     └─ feat/t3-rebalance-invariants
+```
+
+- 集成分支命名 `int/step<n>-<简述>`，`n` 对应 TASK_BRIEF / 五步走的步号。
+- 任务分支仍按第 2 节命名（`feat/t1-...`），**不要**写成 `int/step1-measure-rules/t1`：git 里一个分支名不能同时是另一个分支名的前缀目录，会报 `cannot lock ref`。
+- 每个任务分支用一个独立 worktree 开发：
+  ```bash
+  cd satsim
+  git fetch origin
+  git worktree add ../wt-t1 -b feat/t1-node-state-helpers origin/int/step1-measure-rules
+  git worktree add ../wt-t2 -b feat/t2-badput-p95-metrics origin/int/step1-measure-rules
+  git worktree add ../wt-t3 -b feat/t3-rebalance-invariants origin/int/step1-measure-rules
+  ```
+- 任务做完：rebase 到最新的集成分支 → `uv run pytest -q` 全绿 → 回归检查通过 → 用 `--no-ff` 合进集成分支（保留每个任务的合并点，方便回看），推送，删掉任务分支和 worktree。
+- 集成分支上全部任务合完后，再跑一次全量测试和回归，然后开 PR `int/step<n>-... → main`，由研究负责人验收合并。
+
 ## 2. 命名格式
 
 ```
