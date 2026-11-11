@@ -17,7 +17,7 @@
 3. **不新增仿真脚本**：`scripts/` 下不新增文件。实验一律用 YAML + `satsim-cosim` 或 T5 的 `satsim-suite` 跑。
 4. **术语**：代码、注释、文档里不写「阴影」「shadow」。用 `eclipse`（= `is_dark`，日影，迁出源）和 `cool`（凉星，迁入目标）。
 5. **数字不手抄**：文档和 PR 描述里的每个数字，都必须来自本次运行的原始输出（CSV/JSON），并写明文件路径。不允许估算、编造或「大约」。
-6. **一个任务一个分支一个 PR**，PR 标题 `satsim: T<n> <简述>`。子模块默认是游离 HEAD，先 `cd satsim && git switch main && git pull && git switch -c t<n>-<slug>`。
+6. **一个任务一个分支一个 PR**，分支名按 [`BRANCHING.md`](BRANCHING.md)：`<类型>/<任务号>-<简述>`（如 `feat/t3-rebalance-invariants`），PR 标题 `satsim: T<n> <简述>`，第一次 push 就开 Draft PR。子模块默认是游离 HEAD，先 `cd satsim && git switch main && git pull && git switch -c feat/t<n>-<slug>`。
 7. **测试**：每个任务都要新增 pytest 用例，并保证 `uv run pytest -q` 全绿。
 8. **卡住就停**：遇到下列情况停下来，在 PR 或 issue 里写清楚问题，不要绕过：需求有歧义、需要改 L1、默认行为对不上、测试原本就是红的。
 
