@@ -70,6 +70,10 @@ cd .. && git add satsim && git commit -m "bump satsim" && git push
 
 ## 文档
 
+- **任务目标（阶段一 / 阶段二）**：[`docs/TASK_BRIEF.md`](docs/TASK_BRIEF.md)
+- **术语与建模口径（日照 / 日影 / 凉星 / 热星）**：[`docs/TERMS_AND_MODEL.md`](docs/TERMS_AND_MODEL.md)
+- **架构收敛与迭代路线图（待 Review）**：[`docs/ARCHITECTURE_AND_TODO.md`](docs/ARCHITECTURE_AND_TODO.md)
+- **开发任务单（Handoff，T1–T9）**：[`docs/HANDOFF.md`](docs/HANDOFF.md)
 - 实验与结论：[`satsim/docs/notes/cosim_contact_trace.md`](satsim/docs/notes/cosim_contact_trace.md)
 - 引擎设计：[`satsim/docs/adr/0005-cosim-contact-trace.md`](satsim/docs/adr/0005-cosim-contact-trace.md)
 - 回放页说明：[`orbitsim/viz/README.md`](orbitsim/viz/README.md)
