@@ -1,6 +1,6 @@
 [submodule "orbitsim"]
 	path = orbitsim
-	url = https://github.com/chocolatedesue/orbitsim.git
+	url = https://github.com/acam-infra/orbitsim.git
 	branch = master
 [submodule "satsim"]
 	path = satsim

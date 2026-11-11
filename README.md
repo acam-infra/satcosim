@@ -4,8 +4,8 @@
 
 | 子模块 | 负责 | 产出 |
 |---|---|---|
-| [`orbitsim`](https://github.com/chocolatedesue/orbitsim) | 轨道闭式解、地影、星间可见性；3-D 查看器与回放页 `viz/play.html` | 接触轨迹 `orbitsim.contact_trace/v1` |
-| [`satsim`](https://github.com/chocolatedesue/satsim) | 在轨推理网络与调度仿真 (`satsim.cosim`) | 回放数据 `satsim.cosim_playback/v1` |
+| [`orbitsim`](https://github.com/acam-infra/orbitsim) | 轨道闭式解、地影、星间可见性；3-D 查看器与回放页 `viz/play.html` | 接触轨迹 `orbitsim.contact_trace/v1` |
+| [`satsim`](https://github.com/acam-infra/satsim) | 在轨推理网络与调度仿真 (`satsim.cosim`) | 回放数据 `satsim.cosim_playback/v1` |
 
 ```
 orbitsim/export_cosim.py ──▶ satsim/input/traces/*.json ──▶ satsim-cosim ──▶ orbitsim/viz/public/playback/*.json ──▶ play.html
@@ -15,7 +15,7 @@ orbitsim/export_cosim.py ──▶ satsim/input/traces/*.json ──▶ satsim-c
 ## 快速开始
 
 ```bash
-git clone --recursive https://github.com/chocolatedesue/satcosim.git
+git clone --recursive https://github.com/acam-infra/satcosim.git
 cd satcosim
 python cosim.py setup      # 拉子模块 + uv sync 两边 + npm install
 python cosim.py view       # 打开 http://localhost:5288/play.html
