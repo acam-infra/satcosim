@@ -68,13 +68,21 @@ cd .. && git add satsim && git commit -m "bump satsim" && git push
 
 `cosim.py check` 做三件事：用 orbitsim 当前代码重新导出轨迹，和 `satsim/input/traces` 逐字节比较；用回放里的 `provenance` 哈希判断回放是不是由当前轨迹和配置生成的；确认两个子模块当前提交已 push、工作区干净。任一项不过就以退出码 1 结束，并提示该跑哪条命令。
 
+## 多 Agent 协同开发流程（强模型规划审阅 + 3.8 Flash 并发开发）
+
+本项目在 Multica 平台采用**「强模型统筹规划与集成 Review + 3.8 Flash 多路并发实操」**的双层协同研发模式：
+
+1. **强模型（Architect / Reviewer，如 `gemini-4-carbon`）**：负责顶层架构拆解、物理与负载契约冻结（[`docs/HANDOFF.md`](docs/HANDOFF.md)）、阶段屏障（Stage Barrier）任务切分、集成分支合流审计（防漏合提交、防公平性漏洞、防边界数学失真）以及原始 CSV 指标核验。
+2. **并发执行层（Worker Pool，如多节点 `3.8 Flash`）**：承接无文件冲突的正交子任务，在各自独立任务分支 / worktree（`feat/t<n>-*`、`fix/p0-*`、`exp/e*`）上并发完成代码实现、单测补齐、基线回归校验与网格跑数，提交 Draft PR 回报强模型审阅。
+3. **四道硬闸门**：`契约与量纲预审` → `同 Stage 正交并发编码（Draft PR）` → `强模型集成分支审计与配对跑数核对（转 Ready PR）` → `人工终审合入 main`。完整操作细则与检查单见 [`docs/BRANCHING.md` §8](docs/BRANCHING.md#8-多-agent-协同开发与审阅流程)。
+
 ## 文档
 
 - **任务目标（阶段一 / 阶段二）**：[`docs/TASK_BRIEF.md`](docs/TASK_BRIEF.md)
 - **术语与建模口径（日照 / 日影 / 凉星 / 热星）**：[`docs/TERMS_AND_MODEL.md`](docs/TERMS_AND_MODEL.md)
 - **架构收敛与迭代路线图（待 Review）**：[`docs/ARCHITECTURE_AND_TODO.md`](docs/ARCHITECTURE_AND_TODO.md)
 - **开发任务单（Handoff，T1–T9）**：[`docs/HANDOFF.md`](docs/HANDOFF.md)
-- **分支命名与进度同步约定**：[`docs/BRANCHING.md`](docs/BRANCHING.md)
+- **分支命名、多 Agent 协同与进度同步约定**：[`docs/BRANCHING.md`](docs/BRANCHING.md)
 - 实验与结论：[`satsim/docs/notes/cosim_contact_trace.md`](satsim/docs/notes/cosim_contact_trace.md)
 - 引擎设计：[`satsim/docs/adr/0005-cosim-contact-trace.md`](satsim/docs/adr/0005-cosim-contact-trace.md)
 - 回放页说明：[`orbitsim/viz/README.md`](orbitsim/viz/README.md)
