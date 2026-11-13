@@ -144,27 +144,27 @@ gh pr list -R acam-infra/satsim --state open --draft                 # 正在做
 
 ## 8. 多 Agent 协同开发与审阅流程
 
-在 Multica 平台上推进 `satcosim / satsim / orbitsim` 迭代时，固定采用**「强模型规划与集成 Review + 3.8 Flash 并发开发」**的分工流程，兼顾推进速度与科研可信度。
+在 Multica 平台上推进 `satcosim / satsim / orbitsim` 迭代时，固定采用**「强模型规划与集成 Review + `hydrogen-4` 子 Agent 并发开发」**的分工流程，兼顾推进速度与科研可信度。
 
 ### 8.1 角色分工
 
 | 角色 | 推荐模型池 | 职责边界 | 禁止事项 |
 |---|---|---|---|
-| **统筹规划与审阅（Planner & Reviewer）** | 强推理模型（如 `cc · carbon-4 · gu20x · agy` / `gemini-4-carbon`） | 1. 制定 S1 问题卡、负载物理量纲核算与 [`HANDOFF.md`](HANDOFF.md) 接口契约；<br>2. 将阶段目标切分为文件正交的子任务（`--stage 1/2/...`）；<br>3. 审计 `3.8 Flash` 提交的分支 diff、跨分支祖先关系与边界数学逻辑；<br>4. 在集成分支运行多 seed 配对实验，核对原始 `runs.csv` 数字后将集成分支 PR 转为 Ready。 | 不把未经手算校验的模糊需求直接派给并发层；不跳过原始 CSV 核对直接采信子票口头结论。 |
-| **并发开发与跑数（Concurrent Workers）** | 多账号高并发池（`gemini-3.8-flash` / `qwen3.8-flash` 各节点） | 1. 一票一分支（`feat/t<n>-*`、`fix/p0-*`、`exp/e*`）独立 worktree 编码；<br>2. 编写针对性 `pytest` 用例并跑通 [`HANDOFF.md` §3](HANDOFF.md#3-通用验收默认行为回归检查) 默认行为零回归校验；<br>3. 执行 `satsim-suite` 参数扫描，原样回传 `runs.csv` / `summary.md` 路径与 Draft PR。 | 不跨票修改他人负责的模块；不改默认配置文件已有参数；不手抄或估算实验数字；不直接合入 `main`。 |
+| **统筹规划与审阅（Planner & Reviewer）** | 强推理模型（如 `cc · carbon-4 · gu20x · agy` / `gemini-4-carbon`） | 1. 制定 S1 问题卡、负载物理量纲核算与 [`HANDOFF.md`](HANDOFF.md) / ADR 接口契约；<br>2. 将阶段目标切分为文件正交的子任务（`--stage 1/2/...`）；<br>3. 审计 `hydrogen-4` 子 Agent 提交的分支 diff、跨分支祖先关系与边界数学逻辑（`/code-review` 双轴审查）；<br>4. 在集成分支运行多 seed 配对实验，核对原始 `runs.csv` 数字后将集成分支 PR 转为 Ready。 | 不把未经手算校验的模糊需求直接派给并发层；不跳过原始 CSV 核对直接采信子票口头结论。 |
+| **并发开发与跑数（Concurrent Workers）** | `hydrogen-4` 并发子 Agent 池（`cc · hydrogen-4 · gu20x · agy` / `gemini-4-hydrogen-medium`，可按需辅以 CNB 计算节点跑数） | 1. 一票一分支（`feat/*`、`fix/*`、`exp/*`）独立 worktree 遵循 `/tdd` 编码；<br>2. 编写针对性 `pytest` 用例并跑通 [`HANDOFF.md` §3](HANDOFF.md#3-通用验收默认行为回归检查) 默认行为零回归校验；<br>3. 执行 `satsim-suite` 参数扫描，原样回传 `runs.csv` / `summary.md` 路径与 Draft PR。 | 不跨票修改他人负责的模块；不改默认配置文件已有参数；不手抄或估算实验数字；不直接合入 `main`。 |
 
 ### 8.2 四步标准闭环
 
 ```
-[Step 1 强模型立契约] ──▶ [Step 2 3.8 Flash 分 Stage 并发实操] ──▶ [Step 3 强模型集成审计与实测校准] ──▶ [Step 4 人工终审合入 main]
+[Step 1 强模型立契约] ──▶ [Step 2 hydrogen-4 分 Stage 并发实操] ──▶ [Step 3 强模型集成审计与实测校准] ──▶ [Step 4 人工终审合入 main]
 ```
 
 1. **Step 1 — 前置规划与契约冻结（强模型）**
    - 开工前在契约文档中明确钉死：**注册表键名**（如 `PLACERS` / `MIGRATORS` 字典键）、**公平不变量**（`rebalance_invariants` 周期与配额）、**禁用旧词检查**（只用 `日照/sunlit`、`日影/eclipse`、`凉星/cool`、`热星/hot`）以及**物理瓶颈手算预期**（确认目标负载能真实触发热节流或日影限频，避免在无瓶颈温水区空跑大规模网格）。
-   - 切分任务时保证**同一 Stage 内的子票修改不同文件或正交注册项**；存在先后依赖的任务（如先合入 T1/T3 接口、再写 T7 迁移器与 T8 实验套件）严格拆入 `--stage 1` 与 `--stage 2`（后续阶段先置 `backlog`，前序验收后再放行）。
+   - 切分任务时保证**同一 Stage 内的子票修改不同文件或正交注册项**；存在先后依赖的任务严格拆入 `--stage 1` 与 `--stage 2`（后续阶段先置 `backlog`，前序验收后再放行）。
 
-2. **Step 2 — 独立分支并发开发（3.8 Flash 工作池）**
-   - 由强模型通过 Multica 子票并发派发至多个 `3.8 Flash` runtime（`multica issue create --parent <主票> --stage <N> --assignee <3.8-flash-agent>`），每张子票绑定唯一分支名与集成分支基线（如 `int/step2-scenario-plugins`）。
+2. **Step 2 — 独立分支并发开发（`hydrogen-4` 子 Agent 池）**
+   - 由强模型通过 Multica 子票并发派发至 `hydrogen-4`（`"$MULTICA_CLI_PATH" issue create --parent <主票> --stage <N> --assignee-id a2bb5e27-0863-4876-80dc-c2e6ba041f96`），每张子票绑定唯一分支名与集成分支基线（如 `int/step3-discrete-power-milp`）。
    - Worker 首次推送即开 **Draft PR**，交付评论必须贴齐三项硬证据：
      1. `uv run pytest -q` 尾部输出；
      2. 默认配置 `summary.json` 零回归比对结果（`diffs=0`）；
