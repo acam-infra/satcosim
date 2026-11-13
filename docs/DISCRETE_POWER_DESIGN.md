@@ -159,12 +159,12 @@ $$T_j(t+1) \le T_{\max} + s_j$$
    - 单步短视指派（$H=1$）看不到未来 $H$ 个时隙内的进出日影切换、跨步一阶 RC 热量累积以及多跳 ISL 链路拥塞。
    - 若直接写出多时隙精确整数规划（`discrete_time_ilp`）：联合决策时隙 $\tau \in \{0, \dots, H-1\}$ 上的请求驻留 $y_{r,j,\tau} \in \{0,1\}$、跨星迁移 $m_{r,e,\tau} \in \{0,1\}$ 与离散功率档 $z_{j,k,\tau} \in \{0,1\}$，则二元变量规模按 $O(|\mathcal{R}|(|\mathcal{V}_c| + |\mathcal{E}|)H)$ 爆炸（`Walker 40 ~ 100` 星、$H=12\dots 20$ 时达数十万至数百万二元变量），且由于「零请求 `0W` 跳变开关」破坏 LP 松弛紧性，即便给足 **`time_limit = 120 s`** 求解预算，通用分支定界求解器（HiGHS）在中大规模下仍会超时无解或仅停留在高 Gap 次优解。
 
-2. **专用结构感知算法：`discrete_rh_greedy`（源端 `0W` 排空联盟 + 多步线性 RC 前瞻贪心）**
-   - **源星降档 / `0W` 排空联盟排序**：识别即将进入日影或热裕度紧迫的源星，对能使源星跨越离散档位阈值（尤其是从低功档彻底排空至 `0 W` 空闲档以触发最快指数散热）的请求集合赋予排空协同优先级；
-   - **目的星 $H$ 步线性 RC 轨迹校验**：调用 `rollout_rc_temperatures` 在 $O(H)$ 时间内精确递推候选目的星未来 $H$ 个时隙的光照功率包络与结温轨迹，硬拦截任何会在未来触发 $T_j(\tau) > T_{\max}$ 的指派；
-   - **边际效用/通信字节跳数比增量提交**：在满足 KV 显存、共享 ISL 边预算与 `rebalance_invariants` 公平配额下毫秒级出解。
+2. **专用结构感知算法：`discrete_rh_greedy`（外部性感知 + 源端 `0W` 排空奖励 + 2~3 跳中继 + 锚点拉取意识）**
+   - **源星降档 / `0W` 排空联盟排序**：识别即将进入日影或热裕度紧迫的源星，对能使源星跨越离散档位阈值（尤其是彻底排空至 `0 W` 空闲档以触发最快指数散热）的迁移赋予排空红利；
+   - **目标星外部性惩罚与 $H$ 步线性 RC 轨迹校验**：显式扣除目标星存量请求因并发上升被连带拖慢的 slack 外部性，并调用 `rollout_rc_temperatures` 在 $O(H)$ 内校验未来 $H$ 个时隙的光照功率包络与结温轨迹，硬拦截任何触发 $T_j(\tau) > T_{\max}$ 的指派；
+   - **受控 2~3 跳 $K$-最短路中继与数据锚点 `tether` 惩罚**：允许绕开连片高温/日影星簇，同时计入目标星相对数据锚点的跳数开销防止跨网拉流放大，在满足 KV 显存、共享 ISL 边预算与 `rebalance_invariants` 公平配额下毫秒级出解。
 
-3. **实验评测准则（`jm` 并行跑数，`120 s` 求解上限）**
-   - 统一设定通用时空 ILP 求解器单次时间上限 `time_limit_s = 120.0`；
-   - 在 `jm` 节点（注意容器 CPU 配额为 **8 核**，`nproc` 显示宿主 256 核不可直接采信；并发进程数控制在 `4~6` 且固定 `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1`，先 `nvidia-smi` 确认不影响在跑推理服务）并行跑规模扫描与 5-seed 端到端闭环评测；
-   - 同时汇报 **单步/整轮求解时间（ms/s）** 与 **最终优化目标及有效吞吐（Objective / `good_long_frac` / `goodput_tok_s`，以 `place_once` 为 100% 参照基线）**，验证 `discrete_rh_greedy` 在求解速度数量级领先的同时，在 `120 s` 预算下取得比超时受限的普通时空 ILP 及短视基线更优的最终目标值。
+3. **实验评测边界与算力落点准则（`cnb-compute / cnb-compute2` 并行跑数，离线断面 `120 s` Oracle 对拍 + 在线 5-seed 全仿真闭环）**
+   - **边界分离**：`discrete_time_ilp (time_limit_s = 120.0)` 定位为**离线真实/校准断面 Oracle 对拍器**（同轴对比 `No-Plan Stay`、`1-Hop Greedy`、`discrete_rh_greedy` 与 `120s Time-ILP` 的求解时间、物理目标函数值与热违约）；`3600s × 5-seed` 端到端 `satsim` 全周期闭环只挂接毫秒级的 `discrete_rh_greedy`（及可选快速单步 `discrete_step_milp`），与仓内强基线 `place_once`、`cool_aware`、`deadline_rc` 同配额对决；
+   - **算力落点**：遵循工作区计算规范，在 **`cnb-compute` 与 `cnb-compute2`**（两台 16C/32G 独占计算容器，固定 `OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1`）分片并行跑断面规模扫描与 5-seed 消融套件，不占用 `jm` 节点的 8 核配额与在线 GPU 服务；
+   - **对称公平调速与防除零契约**：日照且热安全裕度充足的节点默认选用最高合法算速档（消除轻载 `0.65x` 人为慢速基线偏差），空星热功率严格 `0.0 W` 而算步频率评估 `effective_clock_f > 0`（并在 `admit / remove / mig_done` 即时同步档位），且在 `discrete_tiers` 模式下显式旁路 `DynamicThermal` 旧 `84°C/76°C` 滞回逻辑。
