@@ -1,0 +1,45 @@
+# Research-friendly Ruff configuration for satcosim / satsim / orbitsim.
+# Focuses on structural complexity, interface hygiene, dead code, and real bugs;
+# avoids pedantic formatting and PEP8 variable-naming nitpicks on physics symbols.
+
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = [
+    "E4",      # import errors
+    "E7",      # statement errors (bare/ambiguous comparisons, lambda assignment)
+    "E9",      # runtime/syntax errors
+    "F",       # Pyflakes: unused imports/vars, undefined names, shadowed names
+    "I",       # isort: deterministic import grouping
+    "B",       # flake8-bugbear: mutable defaults, loop closure bugs, bare except
+    "UP",      # pyupgrade: Python 3.12+ idioms (X | Y, builtin generics)
+    "SIM",     # flake8-simplify: flatten nesting, simplify boolean/context logic
+    "C901",    # McCabe cyclomatic complexity — flags tangled control flow
+    "PLR0912", # too-many-branches — signals policy/dispatcher bloat
+    "PLR0913", # too-many-arguments — signals Data Clumps / missing config dataclass
+    "PLR0915", # too-many-statements — signals long functions needing helpers
+]
+
+# Deliberately omitted for scientific / research code:
+# - N (pep8-naming): allows physical symbols (R_th, C_th, P_max, T_throttle_C, KV)
+# - D (pydocstyle) / ANN (annotations): avoids ceremony on short numerical helpers
+# - E501 (line-length): equations and tables stay readable without forced wrapping
+
+ignore = [
+    "B023",   # sometimes intentional in SimPy closures; review manually if needed
+    "SIM108", # ternary isn't always clearer than an explicit if/else in math code
+]
+
+[lint.mccabe]
+max-complexity = 15
+
+[lint.pylint]
+max-args = 7
+max-branches = 15
+max-statements = 60
+
+[lint.per-file-ignores]
+"**/tests/**" = ["PLR0913", "PLR0915", "C901"]
+"**/scripts/**" = ["C901", "PLR0912", "PLR0913", "PLR0915", "I"]
+"**/research_*.py" = ["C901", "PLR0912", "PLR0913", "PLR0915"]

@@ -6,7 +6,8 @@
   python cosim.py run <config|name>...  # satsim: run experiment(s), write playback for the viewer
   python cosim.py all                   # trace + every configs/cosim_*.yaml
   python cosim.py view                  # start the viewer (http://localhost:5288/play.html)
-  python cosim.py test                  # orbitsim pytest + viz vitest + satsim pytest
+  python cosim.py test                  # orbitsim pytest + viz check/vitest + satsim pytest
+  python cosim.py lint [paths...]       # ruff structural lint + banned terms + viz typecheck
   python cosim.py check                 # traces / playbacks / submodule pins all consistent?
   python cosim.py status                # submodule commits and dirty state
   python cosim.py update                # pull both submodules to their branch heads
@@ -102,10 +103,46 @@ def cmd_test(_args) -> None:
     need_submodules()
     rc = 0
     rc |= sh(["uv", "run", "--frozen", "pytest", "-q"], ORBIT, check=False)
+    if (VIZ / "node_modules").exists():
+        rc |= sh(["npm", "run", "check"], VIZ, check=False)
     rc |= sh(["npx", "vitest", "run"], VIZ, check=False)
     # test_configs_symlink_runs needs real symlinks in satsim/configs (absent on Windows checkouts)
     extra = ["--deselect", "tests/test_plugins.py::test_configs_symlink_runs"] if WIN else []
     rc |= sh(["uv", "run", "--frozen", "pytest", "-q", *extra], SAT, check=False)
+    sys.exit(rc)
+
+
+def _check_banned_terms(paths: list[Path]) -> int:
+    """Check Python sources/tests for banned legacy terms (use sunlit/eclipse/cool/hot)."""
+    import re
+
+    pattern = re.compile(r"阴影|\bshadow\b|dark=cool", re.IGNORECASE)
+    hits: list[str] = []
+    for base in paths:
+        files = [base] if base.is_file() else sorted(base.rglob("*.py"))
+        for fp in files:
+            for lineno, line in enumerate(fp.read_text(encoding="utf-8", errors="ignore").splitlines(), 1):
+                if pattern.search(line):
+                    hits.append(f"  {fp.relative_to(ROOT)}:{lineno}: {line.strip()}")
+    if hits:
+        print("Banned legacy terms found (use sunlit/eclipse/cool/hot):\n" + "\n".join(hits))
+        return 1
+    print("  ok   banned legacy terms (0 hits)")
+    return 0
+
+
+def cmd_lint(args) -> None:
+    """Run research-friendly ruff structural lint, banned-term scan, and viz typecheck."""
+    need_submodules()
+    targets = [str(Path(a)) for a in args] if args else ["cosim.py", "satsim/src", "orbitsim/src"]
+    ruff_cmd = ["ruff"] if shutil.which("ruff") else ["uvx", "ruff"]
+    rc = sh([*ruff_cmd, "check", "--config", str(ROOT / "ruff.toml"), *targets], ROOT, check=False)
+    if not args:
+        rc |= _check_banned_terms([SAT / "src", SAT / "tests"])
+        if (VIZ / "node_modules").exists():
+            rc |= sh(["npm", "run", "check"], VIZ, check=False)
+        else:
+            print("  skip viz tsc --noEmit (orbitsim/viz/node_modules missing; run `python cosim.py setup`)")
     sys.exit(rc)
 
 
@@ -198,7 +235,7 @@ def cmd_update(_args) -> None:
 
 
 COMMANDS = {"setup": cmd_setup, "trace": cmd_trace, "run": cmd_run, "all": cmd_all, "view": cmd_view,
-            "test": cmd_test, "check": cmd_check, "status": cmd_status, "update": cmd_update}
+            "test": cmd_test, "lint": cmd_lint, "check": cmd_check, "status": cmd_status, "update": cmd_update}
 
 
 def main() -> None:
