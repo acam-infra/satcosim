@@ -7,7 +7,7 @@ Co-simulation orchestrator combining `orbitsim` (orbital contact traces), `satsi
 - Entry script: `cosim.py`
 - Submodules: `orbitsim/`, `satsim/`, and `satplan/` (`orbitsim/` and `satsim/` have their own `GLOSSARY.md`; `satsim/` also has `satsim/AGENTS.md` and `satsim/docs/adr/`)
 - Branching, worktrees, PRs, and multi-agent Multica workflow: `docs/BRANCHING.md`
-- Domain terms & modeling background: `docs/TERMS_AND_MODEL.md`, `docs/ARCHITECTURE_AND_TODO.md`, `docs/HANDOFF.md`
+- Domain terms & modeling background: `docs/TERMS_AND_MODEL.md`, `docs/ARCHITECTURE_AND_TODO.md`, `docs/HANDOFF.md`, `docs/HANDOFF_SATPLAN.md` (`satplan` & Multica orchestrator workflow)
 - Coding standards (interfaces, seams, research rigor; read during `/code-review`): `CODING_STANDARDS.md`
 - Structural lint & hygiene checks (`ruff.toml` + banned terms + viz `tsc`): `python cosim.py lint`
 
