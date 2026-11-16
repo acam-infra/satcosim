@@ -25,6 +25,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 ORBIT = ROOT / "orbitsim"
 SAT = ROOT / "satsim"
+PLAN = ROOT / "satplan"
 VIZ = ORBIT / "viz"
 PLAYBACK = VIZ / "public" / "playback"
 TRACES = SAT / "input" / "traces"
@@ -41,7 +42,11 @@ def sh(cmd: list[str], cwd: Path, check: bool = True) -> int:
 
 
 def need_submodules() -> None:
-    if not (ORBIT / "pyproject.toml").exists() or not (SAT / "pyproject.toml").exists():
+    if (
+        not (ORBIT / "pyproject.toml").exists()
+        or not (SAT / "pyproject.toml").exists()
+        or not (PLAN / "pyproject.toml").exists()
+    ):
         sys.exit("submodules missing: run `python cosim.py setup` (or `git submodule update --init`)")
 
 
@@ -51,6 +56,7 @@ def cmd_setup(_args) -> None:
     # UV_INDEX_URL would otherwise rewrite every registry URL in the lock)
     sh(["uv", "sync", "--frozen"], ORBIT)
     sh(["uv", "sync", "--frozen"], SAT)
+    sh(["uv", "sync", "--frozen"], PLAN)
     sh(["npm", "ci"], VIZ)
     print("\nready. try: python cosim.py view")
 
@@ -109,6 +115,7 @@ def cmd_test(_args) -> None:
     # test_configs_symlink_runs needs real symlinks in satsim/configs (absent on Windows checkouts)
     extra = ["--deselect", "tests/test_plugins.py::test_configs_symlink_runs"] if WIN else []
     rc |= sh(["uv", "run", "--frozen", "pytest", "-q", *extra], SAT, check=False)
+    rc |= sh(["uv", "run", "--frozen", "pytest", "-q"], PLAN, check=False)
     sys.exit(rc)
 
 
@@ -134,15 +141,17 @@ def _check_banned_terms(paths: list[Path]) -> int:
 def cmd_lint(args) -> None:
     """Run research-friendly ruff structural lint, banned-term scan, and viz typecheck."""
     need_submodules()
-    targets = [str(Path(a)) for a in args] if args else ["cosim.py", "satsim/src", "orbitsim/src"]
+    targets = [str(Path(a)) for a in args] if args else ["cosim.py", "satsim/src", "orbitsim/src", "satplan/src"]
     ruff_cmd = ["ruff"] if shutil.which("ruff") else ["uvx", "ruff"]
     rc = sh([*ruff_cmd, "check", "--config", str(ROOT / "ruff.toml"), *targets], ROOT, check=False)
     if not args:
-        rc |= _check_banned_terms([SAT / "src", SAT / "tests"])
+        rc |= _check_banned_terms([SAT / "src", SAT / "tests", PLAN / "src", PLAN / "tests"])
         if (VIZ / "node_modules").exists():
             rc |= sh(["npm", "run", "check"], VIZ, check=False)
         else:
             print("  skip viz tsc --noEmit (orbitsim/viz/node_modules missing; run `python cosim.py setup`)")
+    else:
+        rc |= _check_banned_terms([ROOT / a for a in args])
     sys.exit(rc)
 
 
@@ -204,7 +213,7 @@ def cmd_check(_args) -> None:
             ok(f"{e['name']}  (satsim {rec.get('satsim_commit')})")
 
     print("3. submodules: pinned commits are pushed, working trees clean")
-    for p in (ORBIT, SAT):
+    for p in (ORBIT, SAT, PLAN):
         head = _git(p, "rev-parse", "HEAD")
         remote = _git(p, "branch", "-r", "--contains", head)
         dirty = _git(p, "status", "--porcelain")
@@ -216,7 +225,7 @@ def cmd_check(_args) -> None:
             ok(f"{p.name} {head[:8]}")
     pinned = _git(ROOT, "submodule", "status")
     if any(line.startswith("+") for line in pinned.splitlines()):
-        print("  note submodule HEAD differs from the commit pinned here: git add orbitsim satsim && git commit")
+        print("  note submodule HEAD differs from the commit pinned here: git add orbitsim satsim satplan && git commit")
 
     print("\n" + ("all good" if not problems else f"{len(problems)} problem(s)"))
     sys.exit(1 if problems else 0)
@@ -224,7 +233,7 @@ def cmd_check(_args) -> None:
 
 def cmd_status(_args) -> None:
     sh(["git", "submodule", "status"], ROOT)
-    for p in (ORBIT, SAT):
+    for p in (ORBIT, SAT, PLAN):
         sh(["git", "status", "-sb"], p, check=False)
 
 

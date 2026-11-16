@@ -7,3 +7,7 @@
 	url = https://github.com/acam-infra/satsim.git
 	branch = main
 
+[submodule "satplan"]
+	path = satplan
+	url = https://github.com/acam-infra/satplan.git
+	branch = main
