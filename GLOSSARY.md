@@ -51,3 +51,7 @@ _Avoid_: 边传边算
 **Shadow 有效条件 (Shadow Validity)**:
 Background deadline and continuity rule (`D_r^sh`) separating valid Goodput from wasted Badput, orthogonal to the reported throughput-vs-tail-latency tradeoff.
 _Avoid_: 唯一硬性指标
+
+**算完即完成 / 下行开关 (Compute-End Switch / `rs_downlink`)**:
+Boolean config toggle (`rs_downlink`, default `false`) controlling end-to-end request completion: when `false`, requests finish immediately at CS decode completion (`t_delivered = t_decoded`), isolating in-constellation compute, thermal/DoD, and ISL reallocation from return-pass wait (`next_conn`); set `rs_downlink: true` to re-enable RS return downlink (`final` / `stream`).
+_Avoid_: 硬编码回传阻塞
