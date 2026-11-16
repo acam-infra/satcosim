@@ -151,7 +151,9 @@ def cmd_lint(args) -> None:
         else:
             print("  skip viz tsc --noEmit (orbitsim/viz/node_modules missing; run `python cosim.py setup`)")
     else:
-        rc |= _check_banned_terms([ROOT / a for a in args])
+        scan_paths = [ROOT / a for a in args if Path(a).resolve() != (ROOT / "cosim.py").resolve()]
+        if scan_paths:
+            rc |= _check_banned_terms(scan_paths)
     sys.exit(rc)
 
 
@@ -159,20 +161,16 @@ def _git(cwd: Path, *args: str) -> str:
     return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True).stdout.strip()
 
 
-def cmd_check(_args) -> None:
-    """Is everything that should agree actually agreeing? Exit 1 on any problem."""
-    import json
+def _check_traces(ok, bad) -> None:
     import tempfile
-
-    need_submodules()
-    problems: list[str] = []
-    ok = lambda msg: print(f"  ok   {msg}")
-    bad = lambda msg: (problems.append(msg), print(f"  FAIL {msg}"))
 
     print("1. traces: orbitsim HEAD export == satsim/input/traces")
     with tempfile.TemporaryDirectory(dir=ROOT, prefix=".cosim_check_") as tmp:
-        rc = subprocess.call([shutil.which("uv") or "uv", "run", "--frozen", "python", "export_cosim.py", tmp], cwd=ORBIT,
-                             stdout=subprocess.DEVNULL)
+        rc = subprocess.call(
+            [shutil.which("uv") or "uv", "run", "--frozen", "python", "export_cosim.py", tmp],
+            cwd=ORBIT,
+            stdout=subprocess.DEVNULL,
+        )
         if rc:
             bad("export_cosim.py failed")
         for f in sorted(Path(tmp).glob("*.json")):
@@ -184,34 +182,48 @@ def cmd_check(_args) -> None:
             else:
                 ok(f.name)
 
+
+def _check_playbacks(ok, bad) -> None:
+    import json
+
     print("2. playbacks: built from the current traces and configs")
     index = json.loads((PLAYBACK / "index.json").read_text(encoding="utf-8"))
     for e in index:
-        cfg = SAT / "configs" / f"{e['name']}.yaml"
+        sat_cfg = SAT / "configs" / f"{e['name']}.yaml"
+        plan_cfg = PLAN / "configs" / f"{e['name']}.yaml"
         pb = PLAYBACK / f"{e['name']}.json"
         if not pb.exists():
             bad(f"{e['name']}: listed in index.json but {pb.name} is missing")
             continue
-        if not cfg.exists():
-            bad(f"{e['name']}: no satsim/configs/{cfg.name}")
+        if not sat_cfg.exists() and not plan_cfg.exists():
+            bad(f"{e['name']}: no config in satsim/configs or satplan/configs")
             continue
-        out = subprocess.run([shutil.which("uv") or "uv", "run", "--frozen", "satsim-cosim", str(cfg), "--provenance-only"],
-                             cwd=SAT, capture_output=True, text=True)
-        if out.returncode:
-            bad(f"{e['name']}: satsim-cosim --provenance-only failed: {out.stderr.strip()[-200:]}")
-            continue
-        now = json.loads(out.stdout.strip().splitlines()[-1])
         with open(pb, encoding="utf-8") as fh:
             rec = json.load(fh).get("provenance")
         if not rec:
             bad(f"{e['name']}: playback has no provenance (made before it was recorded)  (python cosim.py run {e['name']})")
             continue
+        if not sat_cfg.exists():
+            ok(f"{e['name']}  (satplan {rec.get('satplan_commit')})")
+            continue
+        out = subprocess.run(
+            [shutil.which("uv") or "uv", "run", "--frozen", "satsim-cosim", str(sat_cfg), "--provenance-only"],
+            cwd=SAT,
+            capture_output=True,
+            text=True,
+        )
+        if out.returncode:
+            bad(f"{e['name']}: satsim-cosim --provenance-only failed: {out.stderr.strip()[-200:]}")
+            continue
+        now = json.loads(out.stdout.strip().splitlines()[-1])
         stale = [k for k in ("trace_sha256", "scenario_sha256", "config_sha256") if rec.get(k) != now.get(k)]
         if stale:
             bad(f"{e['name']}: {', '.join(stale)} changed since the playback  (python cosim.py run {e['name']})")
         else:
             ok(f"{e['name']}  (satsim {rec.get('satsim_commit')})")
 
+
+def _check_submodules(ok, bad) -> None:
     print("3. submodules: pinned commits are pushed, working trees clean")
     for p in (ORBIT, SAT, PLAN):
         head = _git(p, "rev-parse", "HEAD")
@@ -227,6 +239,22 @@ def cmd_check(_args) -> None:
     if any(line.startswith("+") for line in pinned.splitlines()):
         print("  note submodule HEAD differs from the commit pinned here: git add orbitsim satsim satplan && git commit")
 
+
+def cmd_check(_args) -> None:
+    """Is everything that should agree actually agreeing? Exit 1 on any problem."""
+    need_submodules()
+    problems: list[str] = []
+
+    def ok(msg: str) -> None:
+        print(f"  ok   {msg}")
+
+    def bad(msg: str) -> None:
+        problems.append(msg)
+        print(f"  FAIL {msg}")
+
+    _check_traces(ok, bad)
+    _check_playbacks(ok, bad)
+    _check_submodules(ok, bad)
     print("\n" + ("all good" if not problems else f"{len(problems)} problem(s)"))
     sys.exit(1 if problems else 0)
 
@@ -240,7 +268,7 @@ def cmd_status(_args) -> None:
 def cmd_update(_args) -> None:
     sh(["git", "submodule", "update", "--init", "--remote"], ROOT)
     sh(["git", "submodule", "status"], ROOT)
-    print("\nif the commits moved: git add orbitsim satsim && git commit -m 'bump submodules'")
+    print("\nif the commits moved: git add orbitsim satsim satplan && git commit -m 'bump submodules'")
 
 
 COMMANDS = {"setup": cmd_setup, "trace": cmd_trace, "run": cmd_run, "all": cmd_all, "view": cmd_view,
