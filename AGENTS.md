@@ -1,17 +1,21 @@
 # satcosim
 
-Co-simulation orchestrator combining `orbitsim` (orbital contact traces) and `satsim` (discrete-event LLM inference & thermal/ISL simulation).
+Co-simulation orchestrator combining `orbitsim` (orbital contact traces), `satsim` (discrete-event LLM inference & thermal/ISL simulation), and `satplan` (store-and-run KV-cache placement & planning).
 
 ## Navigation
 
 - Entry script: `cosim.py`
-- Submodules: `orbitsim/` and `satsim/` (each has its own `GLOSSARY.md`; `satsim/` also has `satsim/AGENTS.md` and `satsim/docs/adr/`)
+- Submodules: `orbitsim/`, `satsim/`, and `satplan/` (`orbitsim/` and `satsim/` have their own `GLOSSARY.md`; `satsim/` also has `satsim/AGENTS.md` and `satsim/docs/adr/`)
 - Branching, worktrees, PRs, and multi-agent Multica workflow: `docs/BRANCHING.md`
 - Domain terms & modeling background: `docs/TERMS_AND_MODEL.md`, `docs/ARCHITECTURE_AND_TODO.md`, `docs/HANDOFF.md`
 - Coding standards (interfaces, seams, research rigor; read during `/code-review`): `CODING_STANDARDS.md`
 - Structural lint & hygiene checks (`ruff.toml` + banned terms + viz `tsc`): `python cosim.py lint`
 
 ## Agent skills
+
+### Project skills
+
+Project-level engineering & workflow skills from `mattpocock/skills` live directly in `.agents/skills/` and are pinned in `skills-lock.json` (excluding JS/TS-only course skills). Any agent reading `<repo>/.agents/skills/` discovers them automatically; run `npx skills experimental_install` to sync or link additional agent targets if needed.
 
 ### Issue tracker
 
