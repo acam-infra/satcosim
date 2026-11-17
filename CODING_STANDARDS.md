@@ -44,6 +44,19 @@ Use `/codebase-design` vocabulary (`module`, `interface`, `depth`, `seam`, `adap
 
 ## 3. Testing & Review Exemptions
 
+### Test admission and cost control
+
+- Prefer a small pure-data `R3Problem` or module test. Use a bounded full simulation when the defect crosses the `CoWorld / ProblemBuilder / R3Solver / PlanAction` seam; do not add another full simulation on every review round by default.
+- Extend a parameter table for variants of one invariant. Around **800 lines per test file** triggers a split by invariant domain, with collected cases and assertions preserved. Do not remove distinct coverage merely to lower a count.
+- Centralize shared builders in `tests/factories.py` and expose fixture entry points through `tests/conftest.py`; test modules must not import helpers from one another. Preserve intentionally different physical defaults explicitly.
+- Register `unit`, `regression` and `e2e` markers. Daily feedback may use `pytest -m "not e2e"`; the PR gate runs full `pytest` and umbrella-root lint. Measure durations instead of promising a universal runtime.
+- E2E `run_suite` tests validate composition and output contracts with one seed and a short horizon. Multi-seed matrices, performance comparisons and all-fine-grid MILP timeout references belong in declarative experiment packages on **cnb-compute/2**.
+- After a core invariant is captured by pytest and passes the PR gate, retire the corresponding independent review script from routine reruns. Keep its original evidence; rerun only the relevant changed-point probe when it still adds an independent oracle, plus pytest and root lint. No cumulative replay of every historical review round.
+
+See [satplan testing policy](satplan/docs/TESTING.md) for tier commands, invariant-domain modules and staged fixture consolidation. Test-only refactors must not change scientific workloads or invalidate a running experiment's frozen source/config/request hashes.
+
+### Seam oracles and naming
+
 1. **Test at module seams with independent oracles**
    - Assert observable behavior through public config/world/metric interfaces using worked hand calculations or conservation checks—do not mock internal fields or recompute production formulas inside assertions.
 2. **Research naming exemptions**
